@@ -36,7 +36,7 @@ function ShareControls({ night, address }: { night: Night; address?: string }) {
     night.signers?.some((s) => s.toLowerCase() === address.toLowerCase());
   const url = new URL(location.href);
   url.hash = `night/${night.date}`;
-  const shareText = `${signed ? "I signed" : "Meet"} the ${formatDate(night.date)} Wheel Canvas. Painted by Squeektoshi, Squeekchain’s hamster. ${formatNumber(night.work)} work units, ${formatNumber(night.blocks)} blocks. One little wheel, a community of colors. #Squeekchain`;
+  const shareText = `${signed ? "I signed" : "Meet"} the ${formatDate(night.date)} Wheel Canvas, built on Squeekchain. Painted by Squeektoshi, Squeekchain’s hamster. ${formatNumber(night.work)} work units, ${formatNumber(night.blocks)} blocks. One little wheel, a community of colors. #Squeekchain`;
   const download = async () => {
     setDownloading(true);
     setMessage("");
@@ -171,14 +171,14 @@ function NightViewer({
         <Artwork night={night} />
         {night.source === "unavailable" && (
           <div className="canvas-message">
-            Settlement data is unavailable for this night.
+            Waiting for data. Past nights appear after their settlement bucket closes.
           </div>
         )}
       </div>
       <div className="viewer-toolbar">
         <p className="pixel">
           {night.source === "unavailable"
-            ? "Settlement data unavailable"
+            ? "Waiting for data"
             : `${formatNumber(night.work)} work · ${formatNumber(night.blocks)} blocks`}{" "}
           · {night.signers === null ? "Checking" : night.signers.length} signers
         </p>
@@ -196,9 +196,11 @@ function NightViewer({
           </p>
         )}
         <p className="muted">
-          {night.source === "daily"
-            ? "The API’s archived settlement buckets span noon to noon UTC. The date labels the start of that interval. Signatures are from midnight to midnight UTC on the labeled date."
-            : "Settlement work and signatures are grouped by UTC date. Tonight’s artwork continues to evolve."}
+          {night.source === "unavailable"
+            ? "Waiting for a completed settlement snapshot. Past nights appear after their bucket closes. Signatures use the labeled UTC date."
+            : night.source === "daily"
+              ? "The API’s archived settlement buckets span noon to noon UTC. The date labels the start of that interval. Signatures are from midnight to midnight UTC on the labeled date."
+              : "Settlement work and signatures are grouped by UTC date. Tonight’s artwork continues to evolve."}
         </p>
         <p className="data-interval">
           Settlement interval:{" "}
@@ -349,7 +351,7 @@ export default function App() {
         <a href="#live" className="brand" aria-label="Wheel Canvas home">
           <Hamster />
           <span>
-            Wheel Canvas<span className="brand-by">by Squeekchain</span>
+            Wheel Canvas<span className="brand-by">built on Squeekchain</span>
           </span>
         </a>
         <nav className="main-nav" aria-label="Main navigation">
@@ -661,7 +663,7 @@ export default function App() {
                     </span>
                     {night.source === "unavailable" && (
                       <span className="thumbnail-unavailable">
-                        Data unavailable
+                        Waiting for data
                       </span>
                     )}
                   </div>
@@ -700,7 +702,7 @@ export default function App() {
                 </p>
               )}
               <p className="muted">
-                Archived work uses the API’s noon-to-noon UTC buckets.
+                Archived work uses the API’s completed noon-to-noon UTC buckets.
                 Signatures use the labeled UTC date.
               </p>
             </div>
@@ -725,12 +727,12 @@ export default function App() {
             </div>
             <a
               className="button secondary"
-              href="https://squeekchain.com/"
+              href="https://sepolia.squeekchain.com"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Icon name="play" size={16} />
-              Watch Squeektoshi
+              Watch on Squeekchain
               <Icon name="external" size={14} />
             </a>
           </div>

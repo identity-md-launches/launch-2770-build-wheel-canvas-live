@@ -1,0 +1,10 @@
+{
+  "engine": {
+    "name": "axe-core",
+    "version": "4.14.0"
+  },
+  "violations": [],
+  "passedRules": 27,
+  "incompleteRules": 1,
+  "note": "An automated Chromium audit, not a screen-reader or full compliance assessment."
+}

@@ -52,7 +52,7 @@ const history = {
       .toISOString()
       .slice(0, 10);
     return {
-      ...bucket(date),
+      ...bucket(date, [12561, 13297, 10587, 10891, 11182, 150][i % 6], [1069, 1141, 967, 980, 1047, 12][i % 6]),
       startAt: `${date}T12:00:00Z`,
       endAt: new Date(Date.parse(`${date}T12:00:00Z`) + 864e5).toISOString(),
     };
@@ -309,6 +309,13 @@ try {
   await page.waitForFunction(
     () => document.querySelector(".signer-count")?.textContent === "1",
   );
+  assert.equal(await page.title(), "Wheel Canvas · built on Squeekchain");
+  assert.match(await page.locator(".site-header .brand").textContent(), /built on Squeekchain/);
+  for (const selector of ['meta[property="og:title"]', 'meta[property="og:description"]', 'meta[name="description"]', 'meta[name="twitter:title"]', 'meta[name="twitter:description"]'])
+    assert.match(await page.locator(selector).getAttribute("content"), /built on Squeekchain/);
+  assert.match(await page.locator(".site-footer").innerText(), /A Squeekchain community artwork/);
+  assert.equal(await page.getByRole("link", { name: "Watch on Squeekchain" }).getAttribute("href"), "https://sepolia.squeekchain.com");
+  check("Community branding and livestream", "title/header/social metadata use built on Squeekchain; independent-community descriptions; footer preserved; livestream points to Sepolia site");
   assert.equal(await page.locator(".wheel-state").innerText(), "Spinning");
   assert.match(
     await page.locator(".live-stats").innerText(),
@@ -324,6 +331,20 @@ try {
     "390px first screen",
     `primary action ends at ${Math.round(action.y + action.height)}px`,
   );
+  await page.screenshot({ path: `${output}/mobile-390.png` });
+  const firstNight = page.locator(".night-open").first();
+  assert.match(await firstNight.innerText(), /Waiting for data/);
+  assert.doesNotMatch(await firstNight.innerText(), /12,561 work/);
+  await firstNight.click();
+  await page.getByRole("dialog").waitFor();
+  assert.match(await page.locator(".canvas-message").innerText(), /Waiting for data/);
+  assert.equal(await page.getByRole("dialog").getByRole("button", { name: "Download PNG" }).isDisabled(), true);
+  assert.equal(await page.getByRole("dialog").getByRole("button", { name: "Share on X" }).isDisabled(), true);
+  await page.getByText("Signatures & artwork data", { exact: true }).click();
+  assert.match(await page.locator(".data-interval").innerText(), /2026-10-31 12:00:00 UTC/);
+  assert.match(await page.locator(".night-details").innerText(), /Waiting for a completed settlement snapshot/);
+  await page.keyboard.press("Escape");
+  check("Open archive bucket", "yesterday remains Waiting for data before noon, including deep-linked viewer; partial work excluded; PNG/X sharing disabled");
   for (const width of [320, 390, 650, 720, 900, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     assert.equal(
@@ -338,6 +359,22 @@ try {
     "Responsive reflow",
     "no horizontal overflow at 320, 390, 650, 720, 900, 1440",
   );
+  await page.screenshot({ path: `${output}/desktop-1440.png`, fullPage: true });
+  const galleryMetrics = await page.locator(".night-thumbnail canvas").evaluateAll((canvases) => canvases.map((canvas) => {
+    const ctx = canvas.getContext("2d");
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let light = 0, marks = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const luminance = pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722;
+      light += luminance;
+      if (luminance > 50) marks++;
+    }
+    return { mean: light / (pixels.length / 4), marks };
+  }));
+  assert(galleryMetrics[1].mean > galleryMetrics[5].mean * 1.25, JSON.stringify(galleryMetrics));
+  assert(galleryMetrics[1].marks > galleryMetrics[5].marks * 2, JSON.stringify(galleryMetrics));
+  await page.locator("#gallery").screenshot({ path: `${output}/gallery-1440.png` });
+  check("Gallery density and brightness", `13,297-work/1,141-block night is denser and brighter than 150-work/12-block night: ${JSON.stringify(galleryMetrics)}`);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
@@ -588,6 +625,19 @@ try {
     "RPC outage retention and recovery",
     "verified signer set preserved through failed public RPC reads; retry restores current reads",
   );
+  await page.clock.setSystemTime(new Date("2026-10-31T12:01:00Z"));
+  await page.clock.runFor(15020);
+  assert.match(await page.locator(".night-open").first().innerText(), /Waiting for data/);
+  check("Cached partial archive after close", "an 08:30 snapshot stays excluded after noon until a completed snapshot arrives");
+  const completedHistory = { ...history, generatedAt: "2026-10-31T12:01:00Z" };
+  await context.route("https://api.squeekchain.com/v1/settlements?range=30d", (route) => route.fulfill({ json: completedHistory }));
+  await page.clock.runFor(15020);
+  await page.waitForFunction(() => document.querySelector(".night-card-data")?.textContent.includes("12,561 work"));
+  await page.locator(".night-open").first().click();
+  await page.getByRole("dialog").waitFor();
+  assert.equal(await page.getByRole("dialog").getByRole("button", { name: "Download PNG" }).isEnabled(), true);
+  await page.keyboard.press("Escape");
+  check("Completed archive appears", "fresh snapshot after bucket end makes the night and its PNG available without reloading");
   const axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();

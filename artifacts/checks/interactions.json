@@ -1,0 +1,132 @@
+[
+  {
+    "name": "Community branding and livestream",
+    "passed": true,
+    "details": "title/header/social metadata use built on Squeekchain; independent-community descriptions; footer preserved; livestream points to Sepolia site"
+  },
+  {
+    "name": "Live parsing and verified signer filters",
+    "passed": true,
+    "details": "speed, RPM, /1e9 progress, exact /1e18 supply; duplicate/unequal/nonzero approvals excluded"
+  },
+  {
+    "name": "390px first screen",
+    "passed": true,
+    "details": "primary action ends at 723px"
+  },
+  {
+    "name": "Open archive bucket",
+    "passed": true,
+    "details": "yesterday remains Waiting for data before noon, including deep-linked viewer; partial work excluded; PNG/X sharing disabled"
+  },
+  {
+    "name": "Responsive reflow",
+    "passed": true,
+    "details": "no horizontal overflow at 320, 390, 650, 720, 900, 1440"
+  },
+  {
+    "name": "Gallery density and brightness",
+    "passed": true,
+    "details": "13,297-work/1,141-block night is denser and brighter than 150-work/12-block night: [{\"mean\":20.39832796904212,\"marks\":34},{\"mean\":31.99805050019381,\"marks\":19880},{\"mean\":28.09145923105874,\"marks\":12183},{\"mean\":27.591659473137316,\"marks\":10989},{\"mean\":28.52928636526978,\"marks\":13961},{\"mean\":21.153078428280516,\"marks\":839}]"
+  },
+  {
+    "name": "200% text enlargement",
+    "passed": true,
+    "details": "root text enlarged to 200% at 390px without horizontal overflow; not native browser zoom"
+  },
+  {
+    "name": "Wallet dialog accessibility",
+    "passed": true,
+    "details": "named EIP-6963 discovery; generic row suppressed; Escape closes and restores focus"
+  },
+  {
+    "name": "Sepolia switch",
+    "passed": true,
+    "details": "4902 falls back to add chain, then switches; no transaction on the wrong network"
+  },
+  {
+    "name": "Rejected transaction recovery",
+    "passed": true,
+    "details": "inline explanation and signing action enabled for retry"
+  },
+  {
+    "name": "Pending transaction state",
+    "passed": true,
+    "details": "disabled action, confirmation label and explorer link while receipt is pending"
+  },
+  {
+    "name": "Exact signing transaction and confirmation",
+    "passed": true,
+    "details": "approve(own address, 0) on the supplied SQK address; zero ETH; matching receipt event; signer added once; no message signing"
+  },
+  {
+    "name": "PNG download",
+    "passed": true,
+    "details": "real PNG, 1600\u00d71200, artwork/date/work/blocks/signers and signed-address footer"
+  },
+  {
+    "name": "Share on X",
+    "passed": true,
+    "details": "prefilled signed text and nightly hash link"
+  },
+  {
+    "name": "Gallery and reproduction data",
+    "passed": true,
+    "details": "30 nights, full-size dialog, earlier/later navigation, hash links, JSON snapshot"
+  },
+  {
+    "name": "Motion control",
+    "passed": true,
+    "details": "pause/resume state exposed; reduced-motion context renders static frames"
+  },
+  {
+    "name": "15-second polling and outage retention",
+    "passed": true,
+    "details": "previous stats retained, stale cue shown, retry action present"
+  },
+  {
+    "name": "Offline reload",
+    "passed": true,
+    "details": "last good data survives a reload through the optional local cache"
+  },
+  {
+    "name": "API recovery",
+    "passed": true,
+    "details": "retry replaces stale state with fresh data"
+  },
+  {
+    "name": "RPC outage retention and recovery",
+    "passed": true,
+    "details": "verified signer set preserved through failed public RPC reads; retry restores current reads"
+  },
+  {
+    "name": "Cached partial archive after close",
+    "passed": true,
+    "details": "an 08:30 snapshot stays excluded after noon until a completed snapshot arrives"
+  },
+  {
+    "name": "Completed archive appears",
+    "passed": true,
+    "details": "fresh snapshot after bucket end makes the night and its PNG available without reloading"
+  },
+  {
+    "name": "Automated accessibility and export resources",
+    "passed": true,
+    "details": "zero axe violations, zero script errors, zero missing local resources under /preview/"
+  },
+  {
+    "name": "Phone wallet paths",
+    "passed": true,
+    "details": "four bundled wallet marks/deep links and Coinbase Smart Wallet; no relay/project ID"
+  },
+  {
+    "name": "Unavailable data and malformed cache",
+    "passed": true,
+    "details": "invalid cache ignored; explicit empty state; PNG/X sharing disabled; no invented totals or script failure"
+  },
+  {
+    "name": "WebKit main interaction",
+    "passed": null,
+    "limitation": "WebKit could not launch: host libraries missing, including libgtk-4.so.1 and libgstreamer-1.0.so.0. No Safari interaction result is claimed."
+  }
+]

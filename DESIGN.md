@@ -2,7 +2,9 @@
 
 ## Overview
 
-Wheel Canvas is a live artwork and community signing tool for Squeekchain. The main visual is a wheel of orange and gold marks on a near-black field. A small pixel hamster gives the interface a recognizable point of origin; the artwork carries the visual detail, while the surrounding interface stays flat and quiet.
+Wheel Canvas is an independent community artwork and signing tool built on Squeekchain. The live wheel uses orange and gold marks on a near-black field; completed nights have seeded palettes that range across hues. A small pixel hamster gives the interface a recognizable point of origin; the artwork carries the visual detail, while the surrounding interface stays flat and quiet.
+
+Use “built on Squeekchain” in the header, page/share titles, social metadata and exported cards. The footer retains “A Squeekchain community artwork.” The site’s independent community identity is explicit in the metadata, social image and README. The desktop header shows its byline; the existing compact phone header hides the byline to preserve its layout. The livestream link reads “Watch on Squeekchain” and opens `https://sepolia.squeekchain.com`.
 
 The first section places the artwork, signing action and live measurements together. The gallery follows, then a short explanation and the exact transaction disclosure. The mobile layout keeps the artwork and signing action on the first screen. This is a dark, English-language interface; no light theme or localization system is implemented.
 
@@ -33,7 +35,7 @@ The CSS uses semantic hex tokens, defined on `:root`.
 
 Measured declared CSS pairs: body text on the page is **16.26:1**, muted text on the surface **8.08:1**, primary button text **9.60:1**, artwork caption text **8.68:1**, and the subdued artwork annotation **6.87:1**. The canvas captions have an opaque `--bg` background. The design probe independently passed measured solid-background text; its canvas/image exclusions and remaining verification limits are in the validation record.
 
-The renderer uses its own warm radial field, orange strokes, golden block rings and address-derived HSL accents. These are artwork, not interface status colors. Keep stroke hues derived from the address hash; do not replace them with random colors.
+The renderer uses a warm radial field (`#271b14` → `#181613` → `#101112`), orange live strokes, golden block rings and address-derived HSL signer accents. Completed-night work strokes use a palette hue seeded from the renderer version, date, first block height, work and block count, plus a 44° spread within each palette. Their HSL lightness rises with activity, and they use source-over at 0.35 alpha. Only block rings use additive blending; ring intensity scales down beyond 32 blocks to preserve the work colors. These are artwork colors, separate from interface status colors. Keep signer hues derived from the address hash and nightly palettes deterministically seeded.
 
 ## Typography
 
@@ -91,11 +93,12 @@ Media clipping is limited to intentional artwork frames. Critical text and addre
 | --- | --- |
 | `.button` in `src/styles.css` | `primary`, `secondary`, `quiet` variants. Primary is reserved for signing. Minimum 44px controls; signing is 48px. Distinct hover, pressed, disabled and focus states. |
 | `Artwork` in `src/components/Artwork.tsx` | Accepts `night`, optional `live`, `paused`, `thumbnail`. ResizeObserver scales the canvas up to 2× device pixel ratio while geometry stays in CSS pixels. Accessible artwork summary describes real data or an unavailable state. |
-| `paintArt` / `downloadCard` in `src/lib/art.ts` | Deterministic canonical renderer and 1600×1200 PNG export. Each completed block has a seeded ring; unique addresses have one accent stroke. The live view adds work-driven marks and a speed-driven tip. Canonical gallery/downloads omit transient animation. |
+| `paintArt` / `downloadCard` in `src/lib/art.ts` | Version `wheel-v2` canonical renderer and 1600×1200 PNG export. Nonzero work receives `round(300 + 900 × min(1, work / 15000))` strokes across all buckets combined. Seeded palette, 5–21 spiral turns and ring-spacing exponent 0.65–1.85 vary each night. Each completed block has a seeded ring; unique addresses have one accent stroke. The live view retains its work-driven trail and speed-driven tip. Canonical gallery/downloads omit transient animation. PNG titles include “built on Squeekchain”; dates, totals and signed-address footer remain. |
 | Live stats / signing panel in `src/App.tsx` | Native `dl` and `progress`; status labels accompany colors. Signing states cover disconnected, wrong network, wallet prompt, pending, rejection, confirmation and retry. Unknown counts are not displayed as zero. |
 | `WalletSheet` in `src/components/WalletSheet.tsx` | Named EIP-6963 rows, generic browser-wallet fallback, Coinbase, and phone app links. Rows are at least 56px. Per-row pending labels, disabled peers and recoverable inline errors. |
 | `Modal` in `src/components/Modal.tsx` | Native `dialog` with named heading, autofocus close control, Escape/backdrop close and focus return. The background is inert while modal. Its contents scroll within a bounded viewport height. |
-| Night cards / `NightViewer` in `src/App.tsx` | Entire card is a native button. Opens a hash-addressable full-size view, with earlier/later navigation, signatures, exact bucket interval and JSON data download. |
+| Night cards / `NightViewer` in `src/App.tsx` | Entire card is a native button. Opens a hash-addressable full-size view, with earlier/later navigation, signatures, exact bucket interval and JSON data download. Open daily buckets remain “Waiting for data” until a snapshot generated after their end arrives. Their viewer preserves the actual interval, explains the wait and disables PNG/X sharing. |
+| Static social image / `scripts/build-social-card.mjs` | Local 1200×630 image generated with `paintArt` and local fonts. Uses the completed October 29 API bucket. Brand byline says “built on Squeekchain”; supporting copy says “Independent community artwork”. Used by both Open Graph and Twitter metadata. |
 | `ShareControls` in `src/App.tsx` | Pattern for PNG download/loading/error feedback and a prefilled X link. “I signed it” requires a matching verified address. Unavailable settlement data disables sharing/download. |
 | `SignerList` in `src/App.tsx` | Address-colored swatches, short explorer links and progressive disclosure. Pending, empty and failed-read states remain distinct. |
 | `Icon` / `Hamster` in `src/components/Icon.tsx` | Decorative SVGs are hidden from assistive technology. Icon-only controls supply their own accessible name. |

@@ -66,11 +66,35 @@ assert.equal(tonight.firstHeight, 5196);
 assert.equal(buildNights("2026-11-01", hourly)[0].source, "unavailable");
 assert.equal(buildNights("2026-10-31", hourly).length, 31);
 assert.equal(emptyNight("2026-10-31").signers, null);
+const noon = Date.parse("2026-10-31T12:00:00Z");
+const daily = parseSettlements({
+  ...raw,
+  recentSettlements: [{ blockHeight: "5204" }],
+  buckets: [
+    { ...raw.buckets[0], startAt: "2026-10-29T12:00:00Z", endAt: "2026-10-30T12:00:00Z" },
+    { ...raw.buckets[1], startAt: "2026-10-30T12:00:00Z", endAt: "2026-10-31T12:00:00Z" },
+  ],
+});
+const beforeClose = buildNights("2026-10-31", hourly, daily, noon - 1);
+assert.equal(beforeClose[0].source, "hourly", "live hourly data remains available");
+assert.equal(beforeClose[1].source, "unavailable", "yesterday's open noon-to-noon bucket stays out");
+assert.deepEqual(beforeClose[1].buckets, []);
+assert.equal(beforeClose[1].intervalEnd, "2026-10-31T12:00:00Z", "waiting viewer preserves the actual bucket interval");
+assert.equal(beforeClose[2].source, "daily");
+assert.equal(beforeClose[2].lastHeight, 5188);
+assert.equal(buildNights("2026-10-31", hourly, daily, noon + 1)[1].source, "unavailable", "cached partial data cannot mature with wall time");
+const atClose = { ...daily, generatedAt: new Date(noon).toISOString() };
+assert.equal(buildNights("2026-10-31", hourly, atClose, noon)[1].source, "unavailable");
+const afterClose = { ...daily, generatedAt: new Date(noon + 1).toISOString() };
+assert.equal(buildNights("2026-10-31", hourly, afterClose, noon - 1)[1].source, "unavailable", "clock-skewed snapshots cannot expose future buckets");
+assert.equal(buildNights("2026-10-31", hourly, afterClose, noon + 1)[1].source, "daily");
+const growing = { ...daily, lastHeight: daily.lastHeight! + 7, buckets: [daily.buckets[0], { ...daily.buckets[1], blocks: daily.buckets[1].blocks + 7, work: 900 }] };
+assert.deepEqual(buildNights("2026-10-31", hourly, growing, noon - 1)[2], beforeClose[2], "an open bucket growing leaves closed nights and heights unchanged");
 const a = "0x4168D958C147b626c16C2e6B3124B4412cA7CE05",
   b = "0xB4f55d6C56F43Ae94850B096A9d13280C3ebAaa9";
 assert.equal(addressHue(a), addressHue(a.toLowerCase()));
 const night: Night = { ...tonight, buckets: hourly.buckets, signers: [a, b] };
-function digest(night: Night, live = false) {
+function renderCommands(night: Night, live = false) {
   const calls: unknown[] = [];
   const gradient = {
     addColorStop: (...args: unknown[]) => calls.push(["colorStop", ...args]),
@@ -101,8 +125,10 @@ function digest(night: Night, live = false) {
     },
   ) as CanvasRenderingContext2D;
   paintArt(ctx, 800, 500, night, live ? { live: status } : {});
-  return createHash("sha256").update(JSON.stringify(calls)).digest("hex");
+  return calls as [string, ...unknown[]][];
 }
+const digest = (night: Night, live = false) =>
+  createHash("sha256").update(JSON.stringify(renderCommands(night, live))).digest("hex");
 assert.equal(digest(night), digest(night));
 assert.equal(
   digest(night),
@@ -120,6 +146,30 @@ for (const changed of [
 ])
   assert.notEqual(digest(night), digest(changed));
 assert.notEqual(digest(night), digest(night, true));
+const archived = (work: number, buckets = 1): Night => ({
+  ...beforeClose[2], work, blocks: 1000,
+  buckets: Array.from({ length: buckets }, (_, i) => ({
+    startAt: new Date(Date.parse("2026-10-29T00:00:00Z") + i * 3600000).toISOString(),
+    endAt: new Date(Date.parse("2026-10-29T00:00:00Z") + (i + 1) * 3600000).toISOString(),
+    work: work / buckets, blocks: 1000 / buckets, settlements: 6,
+  })),
+});
+for (const work of [0, 150, 4000, 10891, 15000, 30000]) {
+  const commands = renderCommands(archived(work));
+  assert.equal(commands.filter(([name]) => name === "ellipse").length, work ? Math.round(300 + 900 * Math.min(1, work / 15000)) : 0);
+  let mode = "source-over";
+  const stack: string[] = [];
+  for (const [name, value] of commands) {
+    if (name === "save") stack.push(mode);
+    if (name === "restore") mode = stack.pop()!;
+    if (name === "globalCompositeOperation") mode = String(value);
+    if (name === "ellipse") assert.equal(mode, "source-over", "archive strokes do not additively saturate");
+    if (name === "strokeStyle" && String(value).startsWith("hsla")) assert.match(String(value), /,0\.35\)$/);
+    if (name === "fillRect") assert.equal(mode, "source-over", "only block rings use lighter");
+  }
+  assert.equal(commands.filter(([name]) => name === "arc").length, 2004, "each of 1000 blocks keeps its ring and accent");
+}
+assert.equal(renderCommands(archived(15000, 10)).filter(([name]) => name === "ellipse").length, 1200, "stroke budget is per night, not per bucket");
 console.log(
-  "PASS model checks: strict parsers; exact supply units; UTC rollover; chronological buckets; stable address hue; canonical render deterministic under input reorder/dedup; date, block, work, signatures and live speed affect marks.",
+  "PASS model checks: strict parsers; units/UTC rollover; open/end-boundary/cached-partial/clock-skew archive exclusion; stable completed-night heights; live hourly data preserved; per-night stroke budget at six work levels; source-over at 0.35 alpha; one lighter ring per block; deterministic seeded geometry and signer dedup; live speed affects marks.",
 );

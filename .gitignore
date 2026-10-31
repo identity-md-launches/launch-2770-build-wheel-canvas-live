@@ -1,4 +1,6 @@
 # Explicit 512-byte path budget: README.md, Submission path budget.
+!artifacts/
+!artifacts/**
 **/node_modules/
 **/.vite/
 **/.cache/

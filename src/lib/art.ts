@@ -1,6 +1,6 @@
 import type { Night, WheelStatus } from "./data";
 
-export const ART_VERSION = "wheel-v1";
+export const ART_VERSION = "wheel-v2";
 export function hash(text: string): number {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -73,43 +73,65 @@ export function paintArt(
     );
     ctx.stroke();
   }
-  const energy = live ? Math.min(1, live.speed / 0.6) : 0.65;
   const baseSeed = `${ART_VERSION}:${night.date}:${night.firstHeight}`;
+  const style = random(hash(`${baseSeed}:style:${night.work}:${night.blocks}`));
+  const activity = Math.min(1, night.work / 15_000);
+  const energy = live ? Math.min(1, live.speed / 0.6) : activity;
+  const paletteHue = style() * 360;
+  const spiralTurns = 5 + style() * 12 + activity * 4;
+  const spiralOffset = style();
+  const ringSpacing = 0.65 + style() * 1.2;
+  // Keep thousands of real block rings from washing out the night's palette.
+  const ringStrength = live ? 1 : 1 / Math.sqrt(Math.max(1, night.blocks / 32));
+  const strokeBudget = Math.round(300 + 900 * activity);
+  const totalWork = night.buckets.reduce((sum, bucket) => sum + bucket.work, 0);
+  let allocatedWork = 0;
   let cursor = night.firstHeight * 17;
   let block = night.firstHeight;
-  ctx.globalCompositeOperation = "lighter";
   const paintRing = (height: number) => {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
     const rng = random(hash(`${ART_VERSION}:${night.date}:block:${height}`));
-    const r = radius * (0.19 + rng() * 0.78),
+    const r = radius * (0.19 + Math.pow(rng(), ringSpacing) * 0.78),
       angle = rng() * Math.PI * 2;
-    ctx.strokeStyle = `rgba(255,${158 + Math.floor(rng() * 72)},93,${0.025 + rng() * 0.07})`;
+    ctx.strokeStyle = `rgba(255,${158 + Math.floor(rng() * 72)},93,${(0.025 + rng() * 0.07) * ringStrength})`;
     ctx.lineWidth = 0.4 + rng() * 0.4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(255,221,142,0.5)";
+    ctx.strokeStyle = `rgba(255,221,142,${0.5 * ringStrength})`;
     ctx.lineWidth = 0.6;
     ctx.beginPath();
     ctx.arc(cx, cy, r, angle, angle + 0.025 + rng() * 0.07);
     ctx.stroke();
+    ctx.restore();
   };
   for (const bucket of [...night.buckets].sort((a, b) =>
     a.startAt.localeCompare(b.startAt),
   )) {
     const rng = random(hash(`${baseSeed}:height:${block}`));
-    // More real work paints more marks. Each mark has a fixed cumulative-work coordinate.
-    const count = Math.min(1200, Math.ceil(bucket.work / 4));
+    // Allocate one night's budget across its buckets, rather than saturating every bucket.
+    const before = totalWork ? Math.round(strokeBudget * allocatedWork / totalWork) : 0;
+    allocatedWork += bucket.work;
+    const count = live
+      ? Math.min(1200, Math.ceil(bucket.work / 4))
+      : totalWork ? Math.round(strokeBudget * allocatedWork / totalWork) - before : 0;
+    ctx.globalCompositeOperation = "source-over";
     for (let i = 0; i < count; i++) {
       const work = cursor + (i / Math.max(count, 1)) * bucket.work;
-      const turn = (((work % 10_000) + 10_000) % 10_000) / 10_000;
-      const angle = turn * Math.PI * 26 + rng() * 0.12;
+      const turn = live
+        ? (((work % 10_000) + 10_000) % 10_000) / 10_000
+        : (before + i) / strokeBudget;
+      const angle = live
+        ? turn * Math.PI * 26 + rng() * 0.12
+        : (turn * spiralTurns + spiralOffset) * Math.PI * 2 + rng() * 0.12;
       const r =
         radius * (0.16 + Math.sqrt(turn) * 0.78) +
         (rng() - 0.5) * radius * 0.055;
       const length = 0.02 + rng() * 0.1 + energy * 0.06;
-      const hue = 19 + rng() * 28;
-      const light = 37 + rng() * 27;
-      ctx.strokeStyle = `hsla(${hue},${65 + rng() * 25}%,${light}%,${0.28 + rng() * 0.45})`;
+      const hue = live ? 19 + rng() * 28 : paletteHue + rng() * 44;
+      const light = live ? 37 + rng() * 27 : 24 + activity * 27 + rng() * 20;
+      ctx.strokeStyle = `hsla(${hue},${65 + rng() * 25}%,${light}%,${live ? 0.28 + rng() * 0.45 : 0.35})`;
       ctx.lineWidth = 0.35 + rng() * 1.2;
       ctx.beginPath();
       ctx.ellipse(
@@ -125,7 +147,9 @@ export function paintArt(
       if (i % 7 === 0) {
         const x = cx + Math.cos(angle) * r,
           y = cy + Math.sin(angle) * r;
-        ctx.fillStyle = "rgba(255,192,91,0.7)";
+        ctx.fillStyle = live
+          ? "rgba(255,192,91,0.7)"
+          : `hsla(${paletteHue + 22},80%,${42 + activity * 28}%,0.35)`;
         ctx.fillRect(x, y, 1.4, 1.4);
       }
     }
@@ -210,7 +234,7 @@ export async function downloadCard(night: Night, address?: string) {
   ctx.drawImage(artwork, 56, 100);
   ctx.fillStyle = "#f4ede3";
   ctx.font = '600 36px "DM Sans",sans-serif';
-  ctx.fillText("Wheel Canvas", 64, 67);
+  ctx.fillText("Wheel Canvas · built on Squeekchain", 64, 67);
   ctx.fillStyle = "#d8b16c";
   ctx.font = '400 24px "Silkscreen",monospace';
   ctx.textAlign = "right";

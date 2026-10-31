@@ -163,11 +163,14 @@ export function buildNights(
   today: string,
   hourly?: Settlements,
   history?: Settlements,
+  now = Date.now(),
 ): Night[] {
   const days = Array.from({ length: 31 }, (_, i) =>
     emptyNight(dayKey(dayStart(today) - i * UTC_DAY)),
   );
   if (history) {
+    // A cached, still-open bucket must not become an archive just as time passes.
+    const completedBefore = Math.min(now, Date.parse(history.generatedAt));
     let height = Math.max(
       0,
       (history.lastHeight ?? 0) - totals(history.buckets).blocks,
@@ -178,6 +181,12 @@ export function buildNights(
       const night = days.find(
         (d) => d.date === dayKey(Date.parse(bucket.startAt)),
       );
+      if (night && Date.parse(bucket.endAt) >= completedBefore) {
+        // Preserve the interval for the waiting viewer, without exposing partial work.
+        night.intervalStart = bucket.startAt;
+        night.intervalEnd = bucket.endAt;
+        continue;
+      }
       if (night)
         Object.assign(night, {
           buckets: [bucket],
