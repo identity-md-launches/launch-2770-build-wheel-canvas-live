@@ -1,0 +1,11 @@
+# Explicit 512-byte path budget: README.md, Submission path budget.
+**/node_modules/
+**/.vite/
+**/.cache/
+**/.npm/
+**/.npm-cache/
+**/playwright-report/
+**/test-results/
+**/coverage/
+**/*.tsbuildinfo
+test/scratch/
